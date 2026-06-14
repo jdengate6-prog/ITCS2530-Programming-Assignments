@@ -20,6 +20,8 @@ int main()
     int purchase_choice; //Choice for if you purchased plant seeds
     int planted_choice;  //Choice for if you planted more than one seed
 
+    test
+
     ofstream outdata;
 
     cout << "Enter Plant Type:";
