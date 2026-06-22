@@ -2,186 +2,346 @@
 #include <iomanip>
 #include <fstream>
 #include <string>
-
+#include <limits>
+#include <cstdlib>
 using namespace std;
 
-//constants for each color
-const string RESET = "\033[0m";
-const string RED = "\033[31m";
-const string GREEN = "\033[32m";
-const string YELLOW = "\033[33m";
-const string CYAN = "\033[36m";
+const int MAX_PLANTS = 5;
 
-void printreport(string R_plant_type, double R_total_price, int R_amt_of_seeds, int R_days_old, int R_days_water, int R_times_watered, int R_total_yield);
-double purchasechoice(double R_purchase_choice);
-int plantedchoice(int R_planted_choice);
-string setcolor();
-void displaybanner(string R_chosen_color);
-void waterhistory(int R_plant_date, int R_todays_date, int& days_water, int& times_watered);
-int yield(int R_amt_of_seeds);
+enum GardenLevel { Beginner = 1, Intermediate = 2, Advanced = 3 };
+
+void changeConsoleColor();
+void displayBanner();
+int displayMenu();
+string getNonEmptyString(string prompt);
+int getValidInt(string prompt, int minValue, int maxValue);
+double getValidDouble(string prompt, double minValue, double maxValue);
+GardenLevel getGardenLevel();
+void collectPlantData(string plantNames[], int seeds[], double costs[], double waterGallons[], int plantCount);
+double calculateTotalCost(double costs[], int plantCount);
+int calculateTotalSeeds(int seeds[], int plantCount);
+double calculateAverageWater(double waterGallons[], int plantCount);
+void showRecommendation(GardenLevel level, int totalSeeds, double totalCost);
+void displayReport(string gardenerName, string plantNames[], int seeds[], double costs[], double waterGallons[], int plantCount, GardenLevel level);
+void saveReport(string gardenerName, string plantNames[], int seeds[], double costs[], double waterGallons[], int plantCount, GardenLevel level);
 
 int main()
 {
-    string plant_type; //Type of Plant
-    string chosen_color; // color for the terminal to be
-    double plant_price; //Price of Plant
-    double total_price; //Total Price of All Seeds
-    int amt_of_seeds; //amt of seeds planted
-    int plant_date;   //Date Plant was Planted
-    int todays_date; //Todays Date
-    int days_old;     //How Many Days Old the Plant is
-    int purchase_choice; //Choice for if you purchased plant seeds
-    int planted_choice;  //Choice for if you planted more than one seed
-    int days_water = 0;   //How Many Days Since the Plant was Last Watered
-    int info_choice;    //Variable for the counter
-    int last_watered;
-    int total_yield = 0;    //Total Yield - to return to main
-    int times_watered = 0; //Variable for Times Watered, resets if information is reentered
+    string gardenerName;
+    string plantNames[MAX_PLANTS];
+    int seeds[MAX_PLANTS];
+    double costs[MAX_PLANTS];
+    double waterGallons[MAX_PLANTS];
+    int plantCount = 0;
+    GardenLevel level;
+    int choice;
+
+    changeConsoleColor();
+    displayBanner();
+
+    gardenerName = getNonEmptyString("Enter gardener name: ");
+    level = getGardenLevel();
 
     do
     {
-        chosen_color = setcolor();
-        displaybanner(chosen_color);
-        cout << "Enter Plant Type:";
-        cin >> plant_type;
-        cout << "Did you buy the plant seeds? 1=Yes 2=No." << endl;
-        cin >> purchase_choice;
-        cout << "Did you plant more than one seed? 1=Yes 2=No." << endl;
-        cin >> planted_choice;
-        plant_price = purchasechoice(purchase_choice);
-        amt_of_seeds = plantedchoice(planted_choice);
-        total_price = plant_price * amt_of_seeds;
-        total_yield = yield(amt_of_seeds);
-        cout << "Enter Date Planted in 3 Digit Date Format:";
-        cin >> plant_date;
-        cout << "Enter Todays Date in 3 Digit Date Format:";
-        cin >> todays_date;
-        days_old = todays_date - plant_date;
-        waterhistory(plant_date, todays_date, days_water, times_watered);
-        cout << "If the Information was Entered Correctly, Enter 0. If There was a Mistake, Enter 1.";
-        cin >> info_choice;
-    } while (info_choice == 1);
-    printreport(plant_type, total_price, amt_of_seeds, days_old, days_water, times_watered, total_yield);
+        choice = displayMenu();
+
+        switch (choice)
+        {
+        case 1:
+            plantCount = getValidInt("How many plant types do you want to track? 1-5: ", 1, MAX_PLANTS);
+            collectPlantData(plantNames, seeds, costs, waterGallons, plantCount);
+            break;
+
+        case 2:
+            if (plantCount > 0)
+            {
+                displayReport(gardenerName, plantNames, seeds, costs, waterGallons, plantCount, level);
+                saveReport(gardenerName, plantNames, seeds, costs, waterGallons, plantCount, level);
+            }
+            else
+            {
+                cout << "Please add plant data first.\n";
+            }
+            break;
+
+        case 3:
+            if (plantCount > 0)
+            {
+                showRecommendation(level, calculateTotalSeeds(seeds, plantCount), calculateTotalCost(costs, plantCount));
+            }
+            else
+            {
+                cout << "Please add plant data first.\n";
+            }
+            break;
+
+        case 4:
+            cout << "Goodbye! Your garden tracker is closing.\n";
+            break;
+
+        default:
+            cout << "Invalid menu choice.\n";
+        }
+
+    } while (choice != 4);
+
+    return 0;
 }
 
-string setcolor()
+// Changes the console text color.
+void changeConsoleColor()
 {
-    string set_color;
-    cout << RESET << "Enter what color you would like the terminal to be. Options: GREEN, RED, YELLOW, CYAN" << endl;
-    cin >> set_color;
-    if (set_color == "GREEN" || set_color == "green") 
-    {
-        return GREEN;
-    }
-    else if (set_color == "RED" || set_color == "red") 
-    {
-        return RED;
-    }
-    else if (set_color == "YELLOW" || set_color == "yellow") 
-    {
-        return YELLOW;
-    }
-    else if (set_color == "CYAN" || set_color == "cyan") 
-    {
-        return CYAN;
-    }
-    return RESET;
+    system("color 0A");
 }
 
-void displaybanner(string R_chosen_color)
+// Displays the program banner.
+void displayBanner()
 {
-    cout << R_chosen_color << "Welcome to my program which you can use to track your garden plants!" << endl;
+    cout << "=============================================\n";
+    cout << "        Welcome to the Garden Tracker         \n";
+    cout << "=============================================\n";
 }
 
-int yield(int R_amt_of_seeds)
+// Displays the menu and returns the user's choice.
+int displayMenu()
 {
-    int seed_yield;     //Yield of each seed
-    int R_total_yield = 0;    //Total Yield - to return to main
-    int i;              //Variable for the counter 
-    for (i = 0; i < R_amt_of_seeds; i++)
-    {
-        cout << "Enter the expected yield of a plant:";
-        cin >> seed_yield;
-        R_total_yield = R_total_yield + seed_yield;
-    }
-    return R_total_yield;
+    cout << "\nMenu\n";
+    cout << "1. Add garden plants\n";
+    cout << "2. View weekly report\n";
+    cout << "3. Recommend garden level\n";
+    cout << "4. Quit\n";
+    return getValidInt("Choose an option: ", 1, 4);
 }
 
-void waterhistory(int R_plant_date, int R_todays_date, int& days_water,int& times_watered)
+// Gets a non-empty string.
+string getNonEmptyString(string prompt)
 {
-    int water_amt = 1;    //Times watered - for the counter
-    int R_last_watered; //Date Plant was Last Watered - to pass to main
-    times_watered = 0; // reset the counter for times watered if data is entered again
-    while (water_amt == 1)
+    string value;
+
+    cout << prompt;
+    getline(cin, value);
+
+    while (value == "")
     {
-        cout << "Enter Water Event Date in 3 Digit Date Format:";
-        cin >> R_last_watered;
-        cout << "If This Was the Last Water Event, Please Enter 0, If There Are More Events, Please Enter 1.";
-        times_watered = times_watered + 1;
-        cin >> water_amt;
+        cout << "Input cannot be blank. Try again: ";
+        getline(cin, value);
     }
-    if (R_plant_date > R_last_watered || R_last_watered > R_todays_date)
-        cout << "Please re-enter date data in the correct format. Conversion can be done at https://www-air.larc.nasa.gov/tools/jday.htm";
-    else {
-        days_water = R_todays_date - R_last_watered;
+
+    return value;
+}
+
+// Gets and validates an integer.
+int getValidInt(string prompt, int minValue, int maxValue)
+{
+    int value;
+
+    cout << prompt;
+    cin >> value;
+
+    while (cin.fail() || value < minValue || value > maxValue)
+    {
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        cout << "Invalid number. Enter " << minValue << " through " << maxValue << ": ";
+        cin >> value;
+    }
+
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    return value;
+}
+
+// Gets and validates a double.
+double getValidDouble(string prompt, double minValue, double maxValue)
+{
+    double value;
+
+    cout << prompt;
+    cin >> value;
+
+    while (cin.fail() || value < minValue || value > maxValue)
+    {
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        cout << "Invalid number. Enter " << minValue << " through " << maxValue << ": ";
+        cin >> value;
+    }
+
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    return value;
+}
+
+// Gets the gardening skill level using an enum.
+GardenLevel getGardenLevel()
+{
+    int choice;
+
+    cout << "\nGarden level:\n";
+    cout << "1. Beginner\n";
+    cout << "2. Intermediate\n";
+    cout << "3. Advanced\n";
+
+    choice = getValidInt("Choose your level: ", 1, 3);
+
+    return static_cast<GardenLevel>(choice);
+}
+
+// Collects plant data into arrays.
+void collectPlantData(string plantNames[], int seeds[], double costs[], double waterGallons[], int plantCount)
+{
+    for (int i = 0; i < plantCount; i++)
+    {
+        cout << "\nPlant #" << i + 1 << endl;
+        plantNames[i] = getNonEmptyString("Enter plant name: ");
+        seeds[i] = getValidInt("Enter number of seeds planted: ", 1, 1000);
+        costs[i] = getValidDouble("Enter total cost for this plant type: $", 0.0, 10000.0);
+        waterGallons[i] = getValidDouble("Enter weekly water used in gallons: ", 0.0, 500.0);
+
+        if (seeds[i] >= 20 && costs[i] <= 25.00)
+        {
+            cout << "Good value: many seeds for a low cost.\n";
+        }
+        else
+        {
+            cout << "This plant may need a higher budget or fewer seeds.\n";
+        }
+
+        if (waterGallons[i] <= 10.0 && seeds[i] >= 5)
+        {
+            cout << "Water usage looks efficient.\n";
+        }
+        else
+        {
+            cout << "Watch the water use for this plant.\n";
+        }
     }
 }
 
-double purchasechoice(double R_purchase_choice)
+// Calculates total cost.
+double calculateTotalCost(double costs[], int plantCount)
 {
-    double R_plant_price;
-    if (R_purchase_choice == 1) 
+    double total = 0;
+
+    for (int i = 0; i < plantCount; i++)
     {
-        cout << "Enter Price of plant seeds:";
-        cin >> R_plant_price;
+        total = total + costs[i];
     }
-    if (R_purchase_choice == 2) 
-    {
-        R_plant_price = 0;
-    }
-    return R_plant_price;
+
+    return total;
 }
 
-int plantedchoice(int R_planted_choice)
+// Calculates total seeds.
+int calculateTotalSeeds(int seeds[], int plantCount)
 {
-    int R_amt_of_seeds;
-    if (R_planted_choice == 1)
+    int total = 0;
+
+    for (int i = 0; i < plantCount; i++)
     {
-        cout << "Enter how many seeds planted:";
-        cin >> R_amt_of_seeds;
+        total = total + seeds[i];
     }
-    if (R_planted_choice == 2)
-    {
-        R_amt_of_seeds = 1;
-    }
-    return R_amt_of_seeds;
+
+    return total;
 }
 
-void printreport(string R_plant_type, double R_total_price, int R_amt_of_seeds, int R_days_old, int R_days_water, int R_times_watered, int R_total_yield)
+// Calculates average weekly water.
+double calculateAverageWater(double waterGallons[], int plantCount)
 {
-    ofstream outdata;
-    int choice;  //Choice for selection menu
-    cout << "please select from the following menu" << endl;
-    cout << "1 = Create report sheet in external document." << endl;
-    cout << "2 = Create report sheet in computer terminal." << endl;
-    cin >> choice;
-    switch (choice)
+    double total = 0;
+
+    for (int i = 0; i < plantCount; i++)
     {
-    case 1:
-        outdata.open("report.txt");
-        outdata << fixed << showpoint;
-        outdata << "-------------- " << R_plant_type << " Summary " << "--------------" << endl;
-        outdata << setw(10) << "Price" << setw(10) << "Seed #" << setw(10) << "Age" << setw(12) << "Last Water" << setw(15) << "Times Watered" << setw(12) << "Total Yield" << endl;
-        outdata << setw(6) << "$" << setprecision(2) << R_total_price << setw(8) << R_amt_of_seeds << setw(10) << R_days_old << setw(12) << R_days_water << setw(15) << R_times_watered << setw(12) << R_total_yield;
-        outdata.close();
+        total = total + waterGallons[i];
+    }
+
+    return total / plantCount;
+}
+
+// Uses enum in a switch decision.
+void showRecommendation(GardenLevel level, int totalSeeds, double totalCost)
+{
+    cout << "\nGarden Recommendation\n";
+
+    switch (level)
+    {
+    case Beginner:
+        cout << "Beginner: Start small and focus on easy plants.\n";
         break;
-    case 2:
-        cout << fixed << showpoint;
-        cout << "-------------- " << R_plant_type << " Summary " << "--------------" << endl;
-        cout << setw(10) << "Price" << setw(10) << "Seed #" << setw(10) << "Age" << setw(12) << "Last Water" << setw(15) << "Times Watered" << setw(12) << "Total Yield" << endl;
-        cout << setw(6) << "$" << setprecision(2) << R_total_price << setw(8) << R_amt_of_seeds << setw(10) << R_days_old << setw(12) << R_days_water << setw(15) << R_times_watered << setw(12) << R_total_yield;
+    case Intermediate:
+        cout << "Intermediate: You can handle a medium garden.\n";
         break;
-    default:
-        cout << "Selection was not in range";
+    case Advanced:
+        cout << "Advanced: You are ready for a larger garden plan.\n";
+        break;
     }
+
+    if (totalSeeds >= 50 && totalCost <= 100.00)
+    {
+        cout << "Your garden plan is large but still affordable.\n";
+    }
+    else
+    {
+        cout << "Your garden plan may need budget or seed adjustments.\n";
+    }
+}
+
+// Displays formatted report.
+void displayReport(string gardenerName, string plantNames[], int seeds[], double costs[], double waterGallons[], int plantCount, GardenLevel level)
+{
+    cout << fixed << showpoint << setprecision(2);
+
+    cout << "\nGarden Report for " << gardenerName << endl;
+    cout << left << setw(18) << "Plant"
+         << right << setw(10) << "Seeds"
+         << setw(12) << "Cost"
+         << setw(15) << "Water Gal." << endl;
+
+    cout << "-------------------------------------------------------\n";
+
+    for (int i = 0; i < plantCount; i++)
+    {
+        cout << left << setw(18) << plantNames[i]
+             << right << setw(10) << seeds[i]
+             << setw(12) << costs[i]
+             << setw(15) << waterGallons[i] << endl;
+    }
+
+    cout << "-------------------------------------------------------\n";
+    cout << left << setw(18) << "Totals"
+         << right << setw(10) << calculateTotalSeeds(seeds, plantCount)
+         << setw(12) << calculateTotalCost(costs, plantCount)
+         << setw(15) << calculateAverageWater(waterGallons, plantCount) << endl;
+}
+
+// Saves formatted report to file.
+void saveReport(string gardenerName, string plantNames[], int seeds[], double costs[], double waterGallons[], int plantCount, GardenLevel level)
+{
+    ofstream outFile("report.txt");
+
+    outFile << fixed << showpoint << setprecision(2);
+
+    outFile << "Garden Report for " << gardenerName << endl;
+    outFile << left << setw(18) << "Plant"
+            << right << setw(10) << "Seeds"
+            << setw(12) << "Cost"
+            << setw(15) << "Water Gal." << endl;
+
+    outFile << "-------------------------------------------------------\n";
+
+    for (int i = 0; i < plantCount; i++)
+    {
+        outFile << left << setw(18) << plantNames[i]
+                << right << setw(10) << seeds[i]
+                << setw(12) << costs[i]
+                << setw(15) << waterGallons[i] << endl;
+    }
+
+    outFile << "-------------------------------------------------------\n";
+    outFile << left << setw(18) << "Totals"
+            << right << setw(10) << calculateTotalSeeds(seeds, plantCount)
+            << setw(12) << calculateTotalCost(costs, plantCount)
+            << setw(15) << calculateAverageWater(waterGallons, plantCount) << endl;
+
+    outFile.close();
+
+    cout << "Report saved to report.txt\n";
 }
