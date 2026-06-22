@@ -1,3 +1,7 @@
--------------- Tomato Summary --------------
-     Price    Seed #       Age  Last Water  Times Watered Total Yield
-     $40.00       2        30          24     -858993457          10
+Garden Report for Paul Bogos
+Plant                  Seeds        Cost     Water Gal.
+-------------------------------------------------------
+Tomatoes                  50       30.00          20.00
+Carrots                   30       15.00           5.00
+-------------------------------------------------------
+Totals                    80       45.00          12.50
