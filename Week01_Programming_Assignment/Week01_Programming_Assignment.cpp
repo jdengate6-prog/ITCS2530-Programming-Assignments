@@ -9,6 +9,14 @@ using namespace std;
 const int MAX_PLANTS = 5;
 
 enum GardenLevel { Beginner = 1, Intermediate = 2, Advanced = 3 };
+struct PlantSession
+{
+    string plantName;
+    int seedsPlanted;
+    double plantCost;
+    double waterGallons;
+};
+PlantSession sessions[MAX_PLANTS];
 
 void changeConsoleColor();
 void displayBanner();
@@ -17,7 +25,7 @@ string getNonEmptyString(string prompt);
 int getValidInt(string prompt, int minValue, int maxValue);
 double getValidDouble(string prompt, double minValue, double maxValue);
 GardenLevel getGardenLevel();
-void collectPlantData(string plantNames[], int seeds[], double costs[], double waterGallons[], int plantCount);
+void collectPlantData(string plantNames[], int seeds[], double costs[], double waterGallons[], PlantSession sessions[], int plantCount);
 double calculateTotalCost(double costs[], int plantCount);
 int calculateTotalSeeds(int seeds[], int plantCount);
 double calculateAverageWater(double waterGallons[], int plantCount);
@@ -45,12 +53,11 @@ int main()
     do
     {
         choice = displayMenu();
-
         switch (choice)
         {
         case 1:
             plantCount = getValidInt("How many plant types do you want to track? 1-5: ", 1, MAX_PLANTS);
-            collectPlantData(plantNames, seeds, costs, waterGallons, plantCount);
+            collectPlantData(plantNames, seeds, costs, waterGallons, sessions, plantCount);
             break;
 
         case 2:
@@ -187,7 +194,7 @@ GardenLevel getGardenLevel()
 }
 
 // Collects plant data into arrays.
-void collectPlantData(string plantNames[], int seeds[], double costs[], double waterGallons[], int plantCount)
+void collectPlantData(string plantNames[], int seeds[], double costs[], double waterGallons[], PlantSession sessions[], int plantCount)
 {
     for (int i = 0; i < plantCount; i++)
     {
@@ -196,6 +203,10 @@ void collectPlantData(string plantNames[], int seeds[], double costs[], double w
         seeds[i] = getValidInt("Enter number of seeds planted: ", 1, 1000);
         costs[i] = getValidDouble("Enter total cost for this plant type: $", 0.0, 10000.0);
         waterGallons[i] = getValidDouble("Enter weekly water used in gallons: ", 0.0, 500.0);
+        sessions[i].plantName = plantNames[i];
+        sessions[i].seedsPlanted = seeds[i];
+        sessions[i].plantCost = costs[i];
+        sessions[i].waterGallons = waterGallons[i];
 
         if (seeds[i] >= 20 && costs[i] <= 25.00)
         {
